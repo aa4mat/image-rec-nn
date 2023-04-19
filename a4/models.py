@@ -1,4 +1,5 @@
 import nn
+import numpy as np
 
 class PerceptronModel(object):
     def __init__(self, dim):
@@ -77,6 +78,10 @@ class RegressionModel(object):
     def __init__(self):
         # Initialize your model parameters here
         "*** YOUR CODE HERE ***"
+        self.rate_of_learning = -0.1
+        self.hidden_layers = []
+        self.sizes_for_each_layers = [250, 250, 250]
+        
 
     def run(self, x):
         """
@@ -88,6 +93,13 @@ class RegressionModel(object):
             A node with shape (batch_size x 1) containing predicted y-values
         """
         "*** YOUR CODE HERE ***"
+        predict_y_value = x
+        for i in range(len(self.hidden_layers)):
+            first = nn.Linear(predict_y_value, self.hidden_layers[i][0])
+            second = nn.AddBias(first, self.hidden_layers[i][1])
+            third = nn.Linear(nn.ReLU(second), self.hidden_layers[i][2])
+            predict_y_value = nn.AddBias(third, self.hidden_layers[i][3])
+        return predict_y_value
 
     def get_loss(self, x, y):
         """
@@ -100,12 +112,41 @@ class RegressionModel(object):
         Returns: a loss node
         """
         "*** YOUR CODE HERE ***"
+        return nn.SquareLoss(self.run(x), y)
 
     def train_model(self, dataset):
         """
         Trains the model.
         """
         "*** YOUR CODE HERE ***"
+        boolean = True
+        batch_size = int(0.1 * dataset.x.shape[0])
+        while len(dataset.x) % batch_size != 0:
+            batch_size += 1
+        
+        for i in range(3):
+            layers = [
+                nn.Parameter(dataset.x.shape[1], self.sizes_for_each_layers[i]),
+                nn.Parameter(1,self.sizes_for_each_layers[i]),
+                nn.Parameter(self.sizes_for_each_layers[i], dataset.x.shape[1]),
+                nn.Parameter(1,1)]
+            self.hidden_layers.append(layers)
+        
+        while boolean:
+            losses_list = []
+            for x_value, y_value in dataset.iterate_once(batch_size):
+                param_list = []
+                for items in self.hidden_layers:
+                    for sub_item in items:
+                        param_list.append(sub_item)
+                multiplier = nn.gradients(param_list, self.get_loss(x_value,y_value))
+                for i in range(len(param_list)):
+                    params = param_list[i]
+                    params.update(self.rate_of_learning, multiplier[i])
+                losses_list.append(nn.as_scalar(self.get_loss(x_value,y_value)))
+            if np.mean(losses_list) < 0.001:#the threshold
+                boolean = False
+
 
 class DigitClassificationModel(object):
     """
