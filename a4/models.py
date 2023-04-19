@@ -172,21 +172,18 @@ class DigitClassificationModel(object):
 
     def __init__(self):
         # Initialize your model (hyper)parameters here
-        "*** YOUR CODE HERE ***"
+
         self.learning_rate = .1  # 0.0001 - 1 (usually 0.1?)
         self.batch_seg_mult = .005
-        # testing size: 1/200th of dataset per batch - 6m
+        # testing size:
+        # 1/200th of dataset per batch - 6m
         # 1/100th - 12+ mins X
-        # 1/10th - 8+
-        self.va_threshold = 0.98
+        # 1/10th - 8+ X
+
+        self.va_threshold = 0.976
         # stop on validation accuracy threshold between (97.5% - 98%)
         # - 98% - 20 mins!! X
-        # 97.6% - 6 mins
-
-        # self.hidden_layers = list()
-        # # initialised at the start of training w/ dataset
-        # self.hidden_layers_size = [150, 150, 150]
-        # # 3 layers
+        # - 97.6% - 6 mins
 
         self.hidden_layers = [
             [
@@ -208,6 +205,11 @@ class DigitClassificationModel(object):
                 nn.Parameter(1, 10)
             ],
         ]   # 3 layers
+        # layer size = 250 -> 11+ mins
+        # 200 -> hit 97.8% at 6 mins, but h_l size too large
+        # 175-> 98%+! but 23 mins
+        # 150 -> 9 mins, 97.22%
+
         # 50 apart - too long, size 50 X
         # 25 apart - 6 mins!
 
@@ -229,8 +231,8 @@ class DigitClassificationModel(object):
             layer = self.hidden_layers[i]
             first = nn.Linear(y, layer[0])
             second = nn.AddBias(first, layer[1])
-            relu = nn.ReLU(second)
-            third = nn.Linear(relu, layer[2])
+            non_lin = nn.ReLU(second)
+            third = nn.Linear(non_lin, layer[2])
             y = nn.AddBias(third, layer[3])
         return y
 
@@ -289,3 +291,4 @@ class DigitClassificationModel(object):
             if dataset.get_validation_accuracy() > self.va_threshold:
                 # achieved threshold accuracy?
                 boolean = False
+
