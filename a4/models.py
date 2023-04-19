@@ -150,6 +150,7 @@ class RegressionModel(object):
                     params.update(self.rate_of_learning, multiplier[i])
                 losses_list.append(
                     nn.as_scalar(self.get_loss(x_value, y_value)))
+
             if np.mean(losses_list) < 0.001:  # the threshold
                 boolean = False
 
@@ -172,15 +173,33 @@ class DigitClassificationModel(object):
     def __init__(self):
         # Initialize your model (hyper)parameters here
         "*** YOUR CODE HERE ***"
-        self.learning_rate = -.1
-        self.batch_size_ratio = .005
-        self.threshold = 0.971
+        self.learning_rate = .005  # 0.0001 - 1 (usually 0.1?)
+        self.batch_seg_mult = .1
+        # testing size: 1/200th of dataset per batch - 6m
+        # 1/100th - 12+ mins X
+        # 1/10th - 
+        self.va_threshold = 0.98
+        # stop on validation accuracy threshold between (97.5% - 98%)
+        # - 98% - 20 mins!! X
+        # 97.6% - 6 mins
+
+        # self.hidden_layers = list()
+        # # initialised at the start of training w/ dataset
+        # self.hidden_layers_size = [150, 150, 150]
+        # # 3 layers
+
         self.hidden_layers = [
             [
                 nn.Parameter(784, 150),
                 nn.Parameter(1, 150),
                 nn.Parameter(150, 784),
-                nn.Parameter(1,784)
+                nn.Parameter(1, 784)
+            ],
+            [
+                nn.Parameter(784, 125),
+                nn.Parameter(1, 125),
+                nn.Parameter(125, 784),
+                nn.Parameter(1, 784)
             ],
             [
                 nn.Parameter(784, 100),
@@ -188,7 +207,9 @@ class DigitClassificationModel(object):
                 nn.Parameter(100, 10),
                 nn.Parameter(1, 10)
             ],
-        ]
+        ]   # 3 layers
+        # 50 apart - too long, size 50 X
+        # 25 apart - 6 mins!
 
     def run(self, x):
         """
@@ -233,13 +254,24 @@ class DigitClassificationModel(object):
         """
         "*** YOUR CODE HERE ***"
         boolean = True
-        batch_size = int(self.batch_size_ratio * dataset.x.shape[0])
+        batch_size = int(self.batch_seg_mult * dataset.x.shape[0])
+        # batch size = 1/2000th of dataset
+
         while len(dataset.x) % batch_size != 0:
             # evenly divisible by batch size
             batch_size += 1
 
+        # # initialise hidden layers
+        # for i in range(len(self.hidden_layers_size)):
+        #     hidden_layers = [
+        #         nn.Parameter(dataset.x.shape[1], self.hidden_layers_size[i]),
+        #         nn.Parameter(1, self.hidden_layers_size[i]),
+        #         nn.Parameter(self.hidden_layers_size[i], dataset.x.shape[1]),
+        #         nn.Parameter((1, 1))
+        #     ]
+        #     self.hidden_layers.append(hidden_layers)
+
         while boolean:
-            losses = list()
             for x, y in dataset.iterate_once(batch_size):
                 parameters = list()
                 for layer in self.hidden_layers:
@@ -247,9 +279,13 @@ class DigitClassificationModel(object):
                         parameters.append(param)
 
                 gradients = nn.gradients(parameters, self.get_loss(x, y))
+                # wrt m, b
 
                 for i in range(len(parameters)):
                     param = parameters[i]
-                    param.update(self.learning_rate, gradients[i])
-            if dataset.get_validation_accuracy() > self.threshold:
+                    param.update(-self.learning_rate, gradients[i])
+
+            # test stopping condition
+            if dataset.get_validation_accuracy() > self.va_threshold:
+                # achieved threshold accuracy?
                 boolean = False
