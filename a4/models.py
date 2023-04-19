@@ -1,6 +1,7 @@
 import nn
 import numpy as np
 
+
 class PerceptronModel(object):
     def __init__(self, dim):
         """
@@ -39,7 +40,7 @@ class PerceptronModel(object):
         # Calculates the predicted class
         pred = nn.as_scalar(self.run(x_point))
         # Returning 1 if the predicted class is non-negative, or -1 otherwise.
-        if (pred >= 0):
+        if pred >= 0:
             return 1
         else:
             return -1
@@ -62,12 +63,15 @@ class PerceptronModel(object):
                 if example != nn.as_scalar(y):
                     # The multiplier argument is a Python scalar.
                     multiplier = nn.as_scalar(y)
-                    # The direction argument is a Node with the same shape as the parameter.
+                    # The direction argument is a Node with the
+                    # same shape as the parameter.
                     direction = x
-                    # Update the weights using update method of nn.Parameter class.
+                    # Update the weights using update method of
+                    # nn.Parameter class.
                     self.w.update(multiplier, direction)
                     # Setting the prerequisite of the while loop to True.
                     boolean = True
+
 
 class RegressionModel(object):
     """
@@ -75,13 +79,13 @@ class RegressionModel(object):
     numbers to real numbers. The network should be sufficiently large to be able
     to approximate sin(x) on the interval [-2pi, 2pi] to reasonable precision.
     """
+
     def __init__(self):
         # Initialize your model parameters here
         "*** YOUR CODE HERE ***"
         self.rate_of_learning = -0.1
         self.hidden_layers = []
         self.sizes_for_each_layers = [250, 250, 250]
-        
 
     def run(self, x):
         """
@@ -123,15 +127,15 @@ class RegressionModel(object):
         batch_size = int(0.1 * dataset.x.shape[0])
         while len(dataset.x) % batch_size != 0:
             batch_size += 1
-        
+
         for i in range(3):
             layers = [
                 nn.Parameter(dataset.x.shape[1], self.sizes_for_each_layers[i]),
-                nn.Parameter(1,self.sizes_for_each_layers[i]),
+                nn.Parameter(1, self.sizes_for_each_layers[i]),
                 nn.Parameter(self.sizes_for_each_layers[i], dataset.x.shape[1]),
-                nn.Parameter(1,1)]
+                nn.Parameter(1, 1)]
             self.hidden_layers.append(layers)
-        
+
         while boolean:
             losses_list = []
             for x_value, y_value in dataset.iterate_once(batch_size):
@@ -139,12 +143,14 @@ class RegressionModel(object):
                 for items in self.hidden_layers:
                     for sub_item in items:
                         param_list.append(sub_item)
-                multiplier = nn.gradients(param_list, self.get_loss(x_value,y_value))
+                multiplier = nn.gradients(param_list,
+                                          self.get_loss(x_value, y_value))
                 for i in range(len(param_list)):
                     params = param_list[i]
                     params.update(self.rate_of_learning, multiplier[i])
-                losses_list.append(nn.as_scalar(self.get_loss(x_value,y_value)))
-            if np.mean(losses_list) < 0.001:#the threshold
+                losses_list.append(
+                    nn.as_scalar(self.get_loss(x_value, y_value)))
+            if np.mean(losses_list) < 0.001:  # the threshold
                 boolean = False
 
 
@@ -162,18 +168,34 @@ class DigitClassificationModel(object):
     methods here. We recommend that you implement the RegressionModel before
     working on this part of the project.)
     """
+
     def __init__(self):
-        # Initialize your model parameters here
+        # Initialize your model (hyper)parameters here
         "*** YOUR CODE HERE ***"
+        self.learning_rate = -.1
+        self.batch_size_ratio = .005
+        self.threshold = 0.971
+        self.hidden_layers = [
+            [
+                nn.Parameter(784, 150),
+                nn.Parameter(1, 150),
+                nn.Parameter(150, 784),
+                nn.Parameter(1,784)
+            ],
+            [
+                nn.Parameter(784, 100),
+                nn.Parameter(1, 100),
+                nn.Parameter(100, 10),
+                nn.Parameter(1, 10)
+            ],
+        ]
 
     def run(self, x):
         """
         Runs the model for a batch of examples.
-
         Your model should predict a node with shape (batch_size x 10),
         containing scores. Higher scores correspond to greater probability of
         the image belonging to a particular class.
-
         Inputs:
             x: a node with shape (batch_size x 784)
         Output:
@@ -181,25 +203,53 @@ class DigitClassificationModel(object):
                 (also called logits)
         """
         "*** YOUR CODE HERE ***"
+        y = x
+        for i in range(len(self.hidden_layers)):
+            layer = self.hidden_layers[i]
+            first = nn.Linear(y, layer[0])
+            second = nn.AddBias(first, layer[1])
+            relu = nn.ReLU(second)
+            third = nn.Linear(relu, layer[2])
+            y = nn.AddBias(third, layer[3])
+        return y
 
     def get_loss(self, x, y):
         """
         Computes the loss for a batch of examples.
-
         The correct labels `y` are represented as a node with shape
         (batch_size x 10). Each row is a one-hot vector encoding the correct
         digit class (0-9).
-
         Inputs:
             x: a node with shape (batch_size x 784)
             y: a node with shape (batch_size x 10)
         Returns: a loss node
         """
         "*** YOUR CODE HERE ***"
+        return nn.SoftmaxLoss(self.run(x), y)
 
     def train_model(self, dataset):
         """
         Trains the model.
         """
         "*** YOUR CODE HERE ***"
+        boolean = True
+        batch_size = int(self.batch_size_ratio * dataset.x.shape[0])
+        while len(dataset.x) % batch_size != 0:
+            # evenly divisible by batch size
+            batch_size += 1
 
+        while boolean:
+            losses = list()
+            for x, y in dataset.iterate_once(batch_size):
+                parameters = list()
+                for layer in self.hidden_layers:
+                    for param in layer:
+                        parameters.append(param)
+
+                gradients = nn.gradients(parameters, self.get_loss(x, y))
+
+                for i in range(len(parameters)):
+                    param = parameters[i]
+                    param.update(self.learning_rate, gradients[i])
+            if dataset.get_validation_accuracy() > self.threshold:
+                boolean = False
