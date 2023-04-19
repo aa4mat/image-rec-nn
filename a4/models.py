@@ -26,7 +26,8 @@ class PerceptronModel(object):
             x_point: a node with shape (1 x dimensions)
         Returns: a node containing a single number (the score)
         """
-        "*** YOUR CODE HERE ***"
+        # Returning an nn.DotProduct object.
+        return nn.DotProduct(self.get_weights(), x_point)
 
     def get_prediction(self, x_point):
         """
@@ -34,13 +35,38 @@ class PerceptronModel(object):
 
         Returns: -1 or 1
         """
-        "*** YOUR CODE HERE ***"
+        # Calculates the predicted class
+        pred = nn.as_scalar(self.run(x_point))
+        # Returning 1 if the predicted class is non-negative, or -1 otherwise.
+        if (pred >= 0):
+            return 1
+        else:
+            return -1
 
     def train_model(self, dataset):
         """
         Train the perceptron until convergence.
         """
-        "*** YOUR CODE HERE ***"
+        # Setting the batch size for the dataset.
+        batch_size = 1
+        # Setting a prerequisite of the while loop to True.
+        boolean = True
+        while boolean:
+            # Setting the prerequisite of the while loop to False to continue.
+            boolean = False
+            for x, y in dataset.iterate_once(batch_size):
+                # Calculates the predicted class.
+                example = self.get_prediction(x)
+                # If the example is misclassified.
+                if example != nn.as_scalar(y):
+                    # The multiplier argument is a Python scalar.
+                    multiplier = nn.as_scalar(y)
+                    # The direction argument is a Node with the same shape as the parameter.
+                    direction = x
+                    # Update the weights using update method of nn.Parameter class.
+                    self.w.update(multiplier, direction)
+                    # Setting the prerequisite of the while loop to True.
+                    boolean = True
 
 class RegressionModel(object):
     """
