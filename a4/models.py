@@ -173,11 +173,11 @@ class DigitClassificationModel(object):
     def __init__(self):
         # Initialize your model (hyper)parameters here
         "*** YOUR CODE HERE ***"
-        self.learning_rate = .005  # 0.0001 - 1 (usually 0.1?)
-        self.batch_seg_mult = .1
+        self.learning_rate = .1  # 0.0001 - 1 (usually 0.1?)
+        self.batch_seg_mult = .005
         # testing size: 1/200th of dataset per batch - 6m
         # 1/100th - 12+ mins X
-        # 1/10th - 
+        # 1/10th - 8+
         self.va_threshold = 0.98
         # stop on validation accuracy threshold between (97.5% - 98%)
         # - 98% - 20 mins!! X
