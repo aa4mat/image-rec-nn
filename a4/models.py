@@ -83,9 +83,9 @@ class RegressionModel(object):
     def __init__(self):
         # Initialize your model parameters here
         "*** YOUR CODE HERE ***"
-        self.rate_of_learning = 0.1
-        self.hidden_layers = []
-        self.sizes_for_each_layers = [250, 250, 250]
+        self.rate_of_learning = 0.1 #the learning rate
+        self.hidden_layers = [] #use for the hidden layer
+        self.sizes_for_each_layers = [250, 250, 250] #three layer, 250 for each size
 
     def run(self, x):
         """
@@ -98,6 +98,7 @@ class RegressionModel(object):
         """
         "*** YOUR CODE HERE ***"
         predict_y_value = x
+        #looping each items and get it prediction
         for i in range(len(self.hidden_layers)):
             first = nn.Linear(predict_y_value, self.hidden_layers[i][0])
             second = nn.AddBias(first, self.hidden_layers[i][1])
@@ -125,9 +126,10 @@ class RegressionModel(object):
         "*** YOUR CODE HERE ***"
         boolean = True
         batch_size = int(0.1 * dataset.x.shape[0])
-        while len(dataset.x) % batch_size != 0:
+        while len(dataset.x) % batch_size != 0:# evenly divisible by batch size
             batch_size += 1
 
+        #get hidden layers
         for i in range(3):
             layers = [
                 nn.Parameter(dataset.x.shape[1], self.sizes_for_each_layers[i]),
@@ -140,7 +142,7 @@ class RegressionModel(object):
             losses_list = []
             for x_value, y_value in dataset.iterate_once(batch_size):
                 param_list = []
-                for items in self.hidden_layers:
+                for items in self.hidden_layers:# list of parameters from hidden layers
                     for sub_item in items:
                         param_list.append(sub_item)
                 multiplier = nn.gradients(param_list,
@@ -151,7 +153,7 @@ class RegressionModel(object):
                 losses_list.append(
                     nn.as_scalar(self.get_loss(x_value, y_value)))
 
-            if np.mean(losses_list) < 0.001:  # the threshold
+            if np.mean(losses_list) < 0.001:  # the threshold and the test
                 boolean = False
 
 
@@ -299,6 +301,7 @@ class DigitClassificationModel(object):
                     param.update(-self.learning_rate, gradients[i])
 
             # test stopping condition
+            
             if dataset.get_validation_accuracy() > self.va_threshold:
                 # achieved threshold accuracy?
                 boolean = False
