@@ -83,7 +83,7 @@ class RegressionModel(object):
     def __init__(self):
         # Initialize your model parameters here
         "*** YOUR CODE HERE ***"
-        self.rate_of_learning = -0.1
+        self.rate_of_learning = 0.1
         self.hidden_layers = []
         self.sizes_for_each_layers = [250, 250, 250]
 
@@ -147,7 +147,7 @@ class RegressionModel(object):
                                           self.get_loss(x_value, y_value))
                 for i in range(len(param_list)):
                     params = param_list[i]
-                    params.update(self.rate_of_learning, multiplier[i])
+                    params.update(-self.rate_of_learning, multiplier[i])
                 losses_list.append(
                     nn.as_scalar(self.get_loss(x_value, y_value)))
 
@@ -173,17 +173,23 @@ class DigitClassificationModel(object):
     def __init__(self):
         # Initialize your model (hyper)parameters here
 
-        self.learning_rate = .1  # 0.0001 - 1 (usually 0.1?)
+        self.learning_rate = .15  # 0.0001 - 1 (usually around 0.1?)
+        # rate = 0.1 -> 12 mins
+        # rate = 0.2 -> MUCH faster, but accuracy ~97.2%
+        # while 0.1 can go up to 98% with the right adjustments
+        # rate = 0.15 -> 5 mins, 97.6%! (2 layers)
+        #                7 mins, 97.5% (3 layers) (ok)
+
         self.batch_seg_mult = .005
         # testing size:
-        # 1/200th of dataset per batch - 6m
+        # 1/200th of dataset per batch - 6m (ok)
         # 1/100th - 12+ mins X
         # 1/10th - 8+ X
 
         self.va_threshold = 0.976
-        # stop on validation accuracy threshold between (97.5% - 98%)
+        # stop on validation accuracy threshold  (97.5% - 98%)
         # - 98% - 20 mins!! X
-        # - 97.6% - 6 mins
+        # - 97.6% - 6 mins (ok)
 
         self.hidden_layers = [
             [
@@ -198,6 +204,9 @@ class DigitClassificationModel(object):
                 nn.Parameter(125, 784),
                 nn.Parameter(1, 784)
             ],
+
+            # 2 layers - faster, overall accuracy 97.7%
+            # 3 layers w/0.15 rate - 97.5%
             [
                 nn.Parameter(784, 100),
                 nn.Parameter(1, 100),
@@ -205,13 +214,14 @@ class DigitClassificationModel(object):
                 nn.Parameter(1, 10)
             ],
         ]   # 3 layers
-        # layer size = 250 -> 11+ mins
-        # 200 -> hit 97.8% at 6 mins, but h_l size too large
-        # 175-> 98%+! but 23 mins
-        # 150 -> 9 mins, 97.22%
+        # layer size = 250 -> 11+ mins X
+        # 200 -> consistently hit 97.8% at 6 mins,
+        # but h_l size too large -> takes too long to finish? X
+        # 175-> 98%+! but 23 mins X
+        # 150 -> 9 mins, 97.22%  (ok)
 
         # 50 apart - too long, size 50 X
-        # 25 apart - 6 mins!
+        # 25 apart - 6 mins! (ok)
 
     def run(self, x):
         """
@@ -227,13 +237,24 @@ class DigitClassificationModel(object):
         """
         "*** YOUR CODE HERE ***"
         y = x
-        for i in range(len(self.hidden_layers)):
+        for i in range(len(self.hidden_layers)-1):
+            # no reLU for last layer - we'll do it separately
             layer = self.hidden_layers[i]
             first = nn.Linear(y, layer[0])
             second = nn.AddBias(first, layer[1])
             non_lin = nn.ReLU(second)
+            # adding non-linearity with ReLU
             third = nn.Linear(non_lin, layer[2])
             y = nn.AddBias(third, layer[3])
+
+        # last layer without ReLU
+        last = len(self.hidden_layers) - 1
+        layer = self.hidden_layers[last]
+        first = nn.Linear(y, layer[0])
+        second = nn.AddBias(first, layer[1])
+        third = nn.Linear(second, layer[2])
+        y = nn.AddBias(third, layer[3])
+
         return y
 
     def get_loss(self, x, y):
@@ -263,19 +284,9 @@ class DigitClassificationModel(object):
             # evenly divisible by batch size
             batch_size += 1
 
-        # # initialise hidden layers
-        # for i in range(len(self.hidden_layers_size)):
-        #     hidden_layers = [
-        #         nn.Parameter(dataset.x.shape[1], self.hidden_layers_size[i]),
-        #         nn.Parameter(1, self.hidden_layers_size[i]),
-        #         nn.Parameter(self.hidden_layers_size[i], dataset.x.shape[1]),
-        #         nn.Parameter((1, 1))
-        #     ]
-        #     self.hidden_layers.append(hidden_layers)
-
         while boolean:
             for x, y in dataset.iterate_once(batch_size):
-                parameters = list()
+                parameters = list()  # list of parameters from hidden layers
                 for layer in self.hidden_layers:
                     for param in layer:
                         parameters.append(param)
